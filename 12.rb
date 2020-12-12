@@ -2,24 +2,37 @@
 
 instructions = File.read("12.input").lines.map { |s| s =~ /(\w)(\d+)/; [$1, $2.to_i] }
 
-COMPASS = { 0 => "E", 90 => "N", 180 => "W", 270 => "S" }
+class Point < Struct.new(:x, :y)
+  def self.new(*)
+    super.freeze
+  end
 
-Point = Struct.new(:x, :y) do
-  def move(direction, count)
-    case direction
-    when "E"
-      self.x += count
-    when "N"
-      self.y += count
-    when "W"
-      self.x -= count
-    when "S"
-      self.y -= count
-    end
+  COMPASS = { "E" => 0, "N" => 90, "W" => 180, "S" => 270 }
+  UNIT = new(1, 0)
+
+  def self.at(angle)
+    UNIT.rotate(COMPASS[angle] || angle)
+  end
+
+  def +(other)
+    Point.new(x + other.x, y + other.y)
+  end
+
+  def *(num)
+    Point.new(x * num, y * num)
   end
 
   def distance_from_origin
     x.abs + y.abs
+  end
+
+  def rotate(degrees)
+    case degrees
+    when 0 then self
+    when 90 then Point.new(-y, x)
+    when 180 then Point.new(-x, -y)
+    when 270 then Point.new(y, -x)
+    end
   end
 end
 
@@ -35,23 +48,14 @@ instructions.each do |direction, count|
     facing -= count
     facing %= 360
   when "F"
-    pos.move(COMPASS[facing], count)
+    pos += Point.at(facing) * count
   else
-    pos.move(direction, count)
+    pos += Point.at(direction) * count
   end
 end
 
 p pos.distance_from_origin
 
-
-
-class Point
-  def rotate(degrees)
-    (degrees / 90).times do
-      self.x, self.y = -self.y, self.x
-    end
-  end
-end
 
 waypoint = Point.new(10, 1)
 ship = Point.new(0, 0)
@@ -59,16 +63,14 @@ ship = Point.new(0, 0)
 instructions.each do |direction, count|
   case direction
   when "F"
-    ship.x += waypoint.x * count
-    ship.y += waypoint.y * count
+    ship += waypoint * count
   when "R"
-    waypoint.rotate(360 - count)
+    waypoint = waypoint.rotate(360 - count)
   when "L"
-    waypoint.rotate(count)
+    waypoint = waypoint.rotate(count)
   else
-    waypoint.move(direction, count)
+    waypoint += Point.at(direction) * count
   end
 end
 
 p ship.distance_from_origin
-
